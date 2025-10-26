@@ -1,0 +1,1 @@
+PS C:\Users\HP> python "C:\Users\HP\OneDrive\Desktop\student_management_gui.py"
