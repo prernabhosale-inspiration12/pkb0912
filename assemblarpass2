@@ -1,0 +1,105 @@
+import os
+
+def assembler_pass2(base_path):
+    # Input files
+    intermediate_file = os.path.join(base_path, "OutputTextTry.txt")
+    sym_file = os.path.join(base_path, "symTab.txt")
+    lit_file = os.path.join(base_path, "litTab.txt")
+    
+    # Output file
+    output_file = os.path.join(base_path, "Pass2.txt")
+    
+    # ---------- Read Symbol Table ----------
+    sym_addr = {}
+    with open(sym_file, "r") as f:
+        next(f)  # skip header
+        index = 1
+        for line in f:
+            line = line.strip()
+            if line:
+                parts = line.split()
+                if len(parts) >= 2:
+                    sym_addr[index] = parts[1]
+                    index += 1
+    
+    # ---------- Read Literal Table ----------
+    lit_addr = {}
+    with open(lit_file, "r") as f:
+        next(f)  # skip header
+        index = 1
+        for line in f:
+            line = line.strip()
+            if line:
+                parts = line.split()
+                if len(parts) >= 3:
+                    lit_addr[index] = parts[2]
+                    index += 1
+    
+    # ---------- Process Intermediate Code ----------
+    with open(intermediate_file, "r") as f_in, open(output_file, "w") as f_out:
+        for line in f_in:
+            line = line.strip()
+            if not line:
+                continue
+
+            # Ignore Assembler Directives (AD)
+            if "(AD" in line:
+                f_out.write("\n")
+                continue
+
+            # Declarative Statements
+            if "(DL,01)" in line:  # DC
+                start = line.index("(C,") + 3
+                end = line.index(")", start)
+                constant = line[start:end]
+                f_out.write(f"+ 00 0 {constant}\n")
+                continue
+            elif "(DL,02)" in line:  # DS
+                f_out.write("\n")
+                continue
+
+            # Imperative Statements
+            if "(IS" in line:
+                # Opcode
+                start = line.index("(IS,") + 4
+                end = line.index(")", start)
+                opcode = int(line[start:end])
+                f_out.write(f"+ {opcode:02d} ")
+
+                # Register (default 0)
+                reg = "0"
+                pos = 0
+                while True:
+                    pos = line.find("(", pos)
+                    if pos == -1:
+                        break
+                    # Check if it's a register (not S or L)
+                    if line[pos-1] not in ["S", "L"] and line[pos+1].isdigit():
+                        reg_end = line.index(")", pos)
+                        reg = line[pos+1:reg_end]
+                        break
+                    pos += 1
+                f_out.write(reg + " ")
+
+                # Operand (Symbol or Literal)
+                if "(S," in line:
+                    start = line.index("(S,") + 3
+                    end = line.index(")", start)
+                    sym_index = int(line[start:end])
+                    f_out.write(sym_addr.get(sym_index, "000") + "\n")
+                elif "(L," in line:
+                    start = line.index("(L,") + 3
+                    end = line.index(")", start)
+                    lit_index = int(line[start:end])
+                    f_out.write(lit_addr.get(lit_index, "000") + "\n")
+                else:
+                    f_out.write("000\n")
+    
+    print("✅ Pass 2 executed successfully!")
+    print(f"Output generated at: {output_file}")
+
+
+# ---------- Run ----------
+if __name__ == "__main__":
+    base_path = r"C:\Users\HP\OneDrive\Desktop\SPOS"
+    assembler_pass2(base_path)
